@@ -1,0 +1,19 @@
+# Python
+backend/venv/
+**/__pycache__/
+*.pyc
+*.db
+
+# Node
+node_modules/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.*
+
+# OS
+.DS_Store
+devmind/.env

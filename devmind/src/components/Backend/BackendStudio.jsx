@@ -1,0 +1,355 @@
+import { useState } from "react";
+import { runCode } from "../../lib/codeRunner";
+import { sendToAI } from "../../lib/anthropic";
+import { pushFile, createRepo, getGithubUser } from "../../lib/github";
+
+const LANGUAGES = [
+  {
+    id: "python",
+    label: "Python",
+    icon: "🐍",
+    frameworks: ["Flask", "FastAPI", "Django", "Pandas", "Raw Python"],
+    default: `# Python Flask API
+from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+@app.route('/api/users', methods=['GET'])
+def get_users():
+    users = [
+        {"id": 1, "name": "Amon Mugo", "role": "admin"},
+        {"id": 2, "name": "Jane Doe", "role": "user"},
+    ]
+    return jsonify(users)
+
+if __name__ == '__main__':
+    app.run(debug=True)`,
+  },
+  {
+    id: "javascript",
+    label: "Node.js",
+    icon: "🟨",
+    frameworks: ["Express", "Fastify", "NestJS", "Raw Node"],
+    default: `// Node.js Express API
+const express = require('express');
+const app = express();
+
+app.use(express.json());
+
+app.get('/api/users', (req, res) => {
+  const users = [
+    { id: 1, name: 'Amon Mugo', role: 'admin' },
+    { id: 2, name: 'Jane Doe', role: 'user' },
+  ];
+  res.json(users);
+});
+
+app.listen(3000, () => console.log('Server running on port 3000'));`,
+  },
+  {
+    id: "java",
+    label: "Java",
+    icon: "☕",
+    frameworks: ["Spring Boot", "Quarkus", "Raw Java"],
+    default: `// Java Spring Boot Controller
+@RestController
+@RequestMapping("/api")
+public class UserController {
+
+    @GetMapping("/users")
+    public List<User> getUsers() {
+        return List.of(
+            new User(1, "Amon Mugo", "admin"),
+            new User(2, "Jane Doe", "user")
+        );
+    }
+}`,
+  },
+  {
+    id: "go",
+    label: "Go",
+    icon: "🐹",
+    frameworks: ["Gin", "Echo", "Fiber", "Raw Go"],
+    default: `// Go Gin API
+package main
+
+import "github.com/gin-gonic/gin"
+
+func main() {
+    r := gin.Default()
+
+    r.GET("/api/users", func(c *gin.Context) {
+        users := []gin.H{
+            {"id": 1, "name": "Amon Mugo", "role": "admin"},
+            {"id": 2, "name": "Jane Doe", "role": "user"},
+        }
+        c.JSON(200, users)
+    })
+
+    r.Run(":8080")
+}`,
+  },
+  {
+    id: "php",
+    label: "PHP",
+    icon: "🐘",
+    frameworks: ["Laravel", "Symfony", "Raw PHP"],
+    default: `<?php
+// PHP Laravel Controller
+namespace App\\Http\\Controllers;
+
+use Illuminate\\Http\\JsonResponse;
+
+class UserController extends Controller
+{
+    public function index(): JsonResponse
+    {
+        $users = [
+            ['id' => 1, 'name' => 'Amon Mugo', 'role' => 'admin'],
+            ['id' => 2, 'name' => 'Jane Doe', 'role' => 'user'],
+        ];
+        return response()->json($users);
+    }
+}`,
+  },
+];
+
+export default function BackendStudio() {
+  const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
+  const [selectedFramework, setSelectedFramework] = useState(LANGUAGES[0].frameworks[0]);
+  const [code, setCode] = useState(LANGUAGES[0].default);
+  const [output, setOutput] = useState(null);
+  const [running, setRunning] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [prompt, setPrompt] = useState("");
+  const [githubStatus, setGithubStatus] = useState(null);
+  const [pushing, setPushing] = useState(false);
+  const [activeTab, setActiveTab] = useState("code");
+
+  const handleLangChange = (lang) => {
+    setSelectedLang(lang);
+    setSelectedFramework(lang.frameworks[0]);
+    setCode(lang.default);
+    setOutput(null);
+  };
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) return;
+    setGenerating(true);
+    try {
+      const response = await sendToAI(
+        [
+          {
+            role: "user",
+            content: `Generate a complete ${selectedLang.label} ${selectedFramework} backend application for: ${prompt}. 
+            Return ONLY the code, no explanation, no markdown backticks.
+            Include proper error handling, comments, and follow best practices.`,
+          },
+        ],
+        ""
+      );
+      setCode(response.replace(/```[\w]*/g, "").replace(/```/g, "").trim());
+      setPrompt("");
+    } catch (err) {
+      setOutput({ error: err.message, output: "" });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleRun = async () => {
+    if (selectedLang.id !== "python" && selectedLang.id !== "javascript") {
+      setOutput({
+        output: "",
+        error: `Live execution for ${selectedLang.label} is coming soon. You can copy and run this code locally.`,
+      });
+      return;
+    }
+    setRunning(true);
+    setOutput(null);
+    const result = await runCode(selectedLang.id, code);
+    setOutput(result);
+    setRunning(false);
+    setActiveTab("output");
+  };
+
+  const handleGithubPush = async () => {
+    setPushing(true);
+    setGithubStatus(null);
+    try {
+      const user = await getGithubUser();
+      const repoName = `devmind-${selectedLang.id}-${Date.now()}`;
+      await createRepo(repoName, `Generated by DevMind AI - ${selectedFramework} app`);
+
+      const ext = { python: "py", javascript: "js", java: "java", go: "go", php: "php" };
+      await pushFile(user.login, repoName, `main.${ext[selectedLang.id]}`, code);
+
+      setGithubStatus({
+        success: true,
+        url: `https://github.com/${user.login}/${repoName}`,
+      });
+    } catch (err) {
+      setGithubStatus({ success: false, error: err.message });
+    } finally {
+      setPushing(false);
+    }
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code);
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-gray-950 text-white font-mono">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-gray-900 border-b border-gray-800">
+        <span className="text-gray-300 text-sm font-medium">⚙️ Backend Studio</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCopy}
+            className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white text-xs rounded-lg transition-all"
+          >
+            📋 Copy
+          </button>
+          <button
+            onClick={handleGithubPush}
+            disabled={pushing}
+            className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white text-xs rounded-lg transition-all disabled:opacity-50"
+          >
+            {pushing ? "⏳ Pushing..." : "🐙 Push to GitHub"}
+          </button>
+          <button
+            onClick={handleRun}
+            disabled={running}
+            className="px-3 py-1 bg-green-700 hover:bg-green-600 text-white text-xs rounded-lg transition-all disabled:opacity-50"
+          >
+            {running ? "⏳ Running..." : "▶ Run"}
+          </button>
+        </div>
+      </div>
+
+      {/* Language selector */}
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800 bg-gray-900 overflow-x-auto">
+        {LANGUAGES.map((lang) => (
+          <button
+            key={lang.id}
+            onClick={() => handleLangChange(lang)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+              selectedLang.id === lang.id
+                ? "bg-blue-600 text-white"
+                : "bg-gray-800 text-gray-400 hover:text-white"
+            }`}
+          >
+            {lang.icon} {lang.label}
+          </button>
+        ))}
+
+        <div className="w-px h-5 bg-gray-700 mx-1" />
+
+        {/* Framework selector */}
+        <select
+          value={selectedFramework}
+          onChange={(e) => setSelectedFramework(e.target.value)}
+          className="bg-gray-800 text-gray-300 text-xs rounded-lg px-3 py-1.5 outline-none border border-gray-700"
+        >
+          {selectedLang.frameworks.map((f) => (
+            <option key={f} value={f}>{f}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* AI Prompt */}
+      <div className="flex gap-2 px-4 py-3 border-b border-gray-800">
+        <input
+          className="flex-1 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-600"
+          placeholder={`Describe your ${selectedLang.label} ${selectedFramework} backend...`}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+          disabled={generating}
+        />
+        <button
+          onClick={handleGenerate}
+          disabled={generating}
+          className="px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-gray-700 text-white text-xs rounded-lg transition-all"
+        >
+          {generating ? "⏳" : "🤖 Generate"}
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-800">
+        {["code", "output"].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 text-xs font-medium capitalize transition-all ${
+              activeTab === tab
+                ? "text-white border-b-2 border-blue-500"
+                : "text-gray-500 hover:text-white"
+            }`}
+          >
+            {tab === "code" ? "📄 Code" : "🖥 Output"}
+          </button>
+        ))}
+      </div>
+
+      {/* Code editor */}
+      {activeTab === "code" && (
+        <div className="flex-1 overflow-auto">
+          <textarea
+            className="w-full h-full bg-gray-950 text-green-400 font-mono text-sm p-4 outline-none resize-none leading-relaxed"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            spellCheck={false}
+          />
+        </div>
+      )}
+
+      {/* Output panel */}
+      {activeTab === "output" && (
+        <div className="flex-1 overflow-auto p-4">
+          {!output ? (
+            <p className="text-gray-600 text-sm">
+              Click ▶ Run to execute your code. Python and Node.js run live. Java, Go and PHP show copy instructions.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {output.output && (
+                <div>
+                  <p className="text-green-400 text-xs mb-2 font-bold">OUTPUT:</p>
+                  <pre className="text-green-300 text-sm bg-gray-900 p-3 rounded-lg whitespace-pre-wrap">
+                    {output.output}
+                  </pre>
+                </div>
+              )}
+              {output.error && (
+                <div>
+                  <p className="text-red-400 text-xs mb-2 font-bold">
+                    {output.error.includes("coming soon") ? "ℹ️ INFO:" : "❌ ERROR:"}
+                  </p>
+                  <pre className="text-red-300 text-sm bg-gray-900 p-3 rounded-lg whitespace-pre-wrap">
+                    {output.error}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* GitHub status */}
+      {githubStatus && (
+        <div className={`px-4 py-3 border-t border-gray-800 text-xs ${
+          githubStatus.success ? "text-green-400" : "text-red-400"
+        }`}>
+          {githubStatus.success ? (
+            <>✅ Pushed to GitHub! <a href={githubStatus.url} target="_blank" rel="noreferrer" className="underline">{githubStatus.url}</a></>
+          ) : (
+            <>❌ GitHub error: {githubStatus.error}</>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

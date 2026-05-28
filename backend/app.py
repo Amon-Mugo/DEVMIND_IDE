@@ -1,153 +1,79 @@
-from flask import Flask, request, jsonify
-import sqlite3
-import uuid
-import datetime
 from flask_cors import CORS
+from flask import Flask, jsonify, request
+from uuid import uuid4
 
 app = Flask(__name__)
 CORS(app)
 
-# Connect to SQLite database
-def get_db_connection():
-    conn = sqlite3.connect('ecommerce.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+# Hardcoded sneaker products
+sneakers = [
+    {"id": 1, "name": "Nike Air Jordan", "price": 120.0, "image_url": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400", "stock": 10},
+    {"id": 2, "name": "Adidas Yeezy", "price": 200.0, "image_url": "https://images.unsplash.com/photo-1608231387042-66d1773070a5?w=400", "stock": 5},
+    {"id": 3, "name": "Converse Chuck Taylor", "price": 60.0, "image_url": "https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=400", "stock": 15},
+    {"id": 4, "name": "Vans Old Skool", "price": 80.0, "image_url": "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400", "stock": 8},
+    {"id": 5, "name": "Reebok Classic", "price": 100.0, "image_url": "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400", "stock": 12},
+    {"id": 6, "name": "New Balance 574", "price": 140.0, "image_url": "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=400", "stock": 9}
+]
 
-# Create tables if they don't exist
-def create_tables():
-    conn = get_db_connection()
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
-            price REAL NOT NULL
-        )
-    ''')
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS cart (
-            id INTEGER PRIMARY KEY,
-            session_id TEXT NOT NULL,
-            product_id INTEGER NOT NULL,
-            quantity INTEGER NOT NULL,
-            FOREIGN KEY (product_id) REFERENCES products (id)
-        )
-    ''')
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS orders (
-            id INTEGER PRIMARY KEY,
-            session_id TEXT NOT NULL,
-            order_date TEXT NOT NULL,
-            total REAL NOT NULL
-        )
-    ''')
-    conn.close()
-
-# Seed products table with 5 electronics products
-def seed_products():
-    conn = get_db_connection()
-    count = conn.execute('SELECT COUNT(*) FROM products').fetchone()[0]
-    if count == 0:  # Only seed if empty
-        products = [
-            ('Apple iPhone 13', 999.99),
-            ('Samsung 4K TV', 1299.99),
-            ('Sony PlayStation 5', 499.99),
-            ('Dell Inspiron Laptop', 799.99),
-            ('Canon EOS Camera', 899.99)
-        ]
-        conn.executemany('INSERT INTO products (name, price) VALUES (?, ?)', products)
-        conn.commit()
-    conn.close()
-
-create_tables()
-seed_products()
+# In-memory cart storage
+carts = {}
 
 # GET /api/products
 @app.route('/api/products', methods=['GET'])
 def get_products():
-    conn = get_db_connection()
-    products = conn.execute('SELECT * FROM products').fetchall()
-    conn.close()
-    return jsonify([dict(product) for product in products])
-
-# GET /api/products/<id>
-@app.route('/api/products/<int:id>', methods=['GET'])
-def get_product(id):
-    conn = get_db_connection()
-    product = conn.execute('SELECT * FROM products WHERE id = ?', (id,)).fetchone()
-    conn.close()
-    if product is None:
-        return jsonify({'error': 'Product not found'}), 404
-    return jsonify(dict(product))
+    return jsonify(sneakers)
 
 # POST /api/cart
 @app.route('/api/cart', methods=['POST'])
 def add_to_cart():
-    data = request.json
-    if 'product_id' not in data or 'quantity' not in data:
-        return jsonify({'error': 'Invalid request'}), 400
-    conn = get_db_connection()
-    product = conn.execute('SELECT * FROM products WHERE id = ?', (data['product_id'],)).fetchone()
-    if product is None:
-        return jsonify({'error': 'Product not found'}), 404
-    session_id = request.cookies.get('session_id')
-    if session_id is None:
-        session_id = str(uuid.uuid4())
-    conn.execute('''
-        INSERT INTO cart (session_id, product_id, quantity)
-        VALUES (?, ?, ?)
-    ''', (session_id, data['product_id'], data['quantity']))
-    conn.commit()
-    conn.close()
-    return jsonify({'message': 'Product added to cart'})
+    try:
+        data = request.json
+        session_id = data.get('session_id')
+        product_id = data.get('product_id')
+        if not session_id or not product_id:
+            return jsonify({"error": "Missing session_id or product_id"}), 400
+        product = next((p for p in sneakers if p['id'] == product_id), None)
+        if not product:
+            return jsonify({"error": "Product not found"}), 404
+        if product['stock'] <= 0:
+            return jsonify({"error": "Product out of stock"}), 400
+        if session_id not in carts:
+            carts[session_id] = []
+        carts[session_id].append(product)
+        product['stock'] -= 1
+        return jsonify({"message": "Product added to cart"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # GET /api/cart/<session_id>
-@app.route('/api/cart/<string:session_id>', methods=['GET'])
+@app.route('/api/cart/<session_id>', methods=['GET'])
 def get_cart(session_id):
-    conn = get_db_connection()
-    cart = conn.execute('''
-        SELECT p.name, p.price, c.quantity
-        FROM cart c
-        JOIN products p ON c.product_id = p.id
-        WHERE c.session_id = ?
-    ''', (session_id,)).fetchall()
-    conn.close()
-    return jsonify([dict(item) for item in cart])
+    try:
+        if session_id not in carts:
+            return jsonify({"error": "Cart not found"}), 404
+        return jsonify(carts[session_id])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # POST /api/orders
 @app.route('/api/orders', methods=['POST'])
-def create_order():
-    data = request.json
-    if 'session_id' not in data:
-        return jsonify({'error': 'Invalid request'}), 400
-    conn = get_db_connection()
-    cart = conn.execute('''
-        SELECT p.price, c.quantity
-        FROM cart c
-        JOIN products p ON c.product_id = p.id
-        WHERE c.session_id = ?
-    ''', (data['session_id'],)).fetchall()
-    if not cart:
-        return jsonify({'error': 'Cart is empty'}), 400
-    total = sum(item['price'] * item['quantity'] for item in cart)
-    conn.execute('''
-        INSERT INTO orders (session_id, order_date, total)
-        VALUES (?, ?, ?)
-    ''', (data['session_id'], datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'), total))
-    conn.commit()
-    conn.execute('DELETE FROM cart WHERE session_id = ?', (data['session_id'],))
-    conn.commit()
-    conn.close()
-    return jsonify({'message': 'Order created successfully'})
-
-# GET /api/orders/<id>
-@app.route('/api/orders/<int:id>', methods=['GET'])
-def get_order(id):
-    conn = get_db_connection()
-    order = conn.execute('SELECT * FROM orders WHERE id = ?', (id,)).fetchone()
-    conn.close()
-    if order is None:
-        return jsonify({'error': 'Order not found'}), 404
-    return jsonify(dict(order))
+def checkout():
+    try:
+        data = request.json
+        session_id = data.get('session_id')
+        if not session_id:
+            return jsonify({"error": "Missing session_id"}), 400
+        if session_id not in carts:
+            return jsonify({"error": "Cart not found"}), 404
+        cart = carts[session_id]
+        total = sum(p['price'] for p in cart)
+        # Create order and update stock
+        order = {"session_id": session_id, "total": total, "products": cart}
+        # Clear cart
+        del carts[session_id]
+        return jsonify({"order": order, "message": "Order created successfully"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

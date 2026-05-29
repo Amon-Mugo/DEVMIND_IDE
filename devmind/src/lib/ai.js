@@ -129,7 +129,7 @@ const sendToOpenRouter = async (messages, currentCode) => {
       "X-Title": "DevMind IDE",
     },
     body: JSON.stringify({
-      model: "google/gemini-3.5-flash",
+      model: "google/gemini-2.0-flash-001",
       max_tokens: 4000,
       temperature: 0.7,
       messages: [

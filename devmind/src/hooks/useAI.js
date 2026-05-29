@@ -1,4 +1,4 @@
-import { sendToAI } from "../lib/anthropic";
+import { sendToAI } from "../lib/ai";
 import { fetchImages, detectKeyword } from "../lib/unsplash";
 import useDevMindStore from "../store/useDevMindStore";
 

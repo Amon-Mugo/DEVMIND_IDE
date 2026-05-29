@@ -2,7 +2,7 @@ import Editor from "@monaco-editor/react";
 import { useRef, useState } from "react";
 import useDevMindStore from "../../store/useDevMindStore";
 import EditorTabs from "./EditorTabs";
-import { sendToAI } from "../../lib/anthropic";
+import { sendToAI } from "../../lib/ai";
 
 export default function MonacoEditor() {
   const { code, setCode, mode } = useDevMindStore();

@@ -2,9 +2,21 @@ import { useState } from "react";
 import useDevMindStore from "../../store/useDevMindStore";
 import { supabase } from "../../lib/supabase";
 
-export default function TopBar({ showChat, setShowChat, user }) {
+export default function TopBar({
+  showChat,
+  setShowChat,
+  user,
+  saveStatus,
+  currentProjectName,
+  onNewProject,
+  onRenameProject,
+  onShowProjects,
+  hasProject,
+}) {
   const { mode, setMode, code, undo, redo, historyIndex, history } = useDevMindStore();
   const [copied, setCopied] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState("");
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
@@ -29,35 +41,79 @@ export default function TopBar({ showChat, setShowChat, user }) {
     await supabase.auth.signOut();
   };
 
+  const handleNameClick = () => {
+    setNameInput(currentProjectName);
+    setEditingName(true);
+  };
+
+  const handleNameSave = () => {
+    if (nameInput.trim()) onRenameProject(nameInput.trim());
+    setEditingName(false);
+  };
+
+  const saveLabel = () => {
+    if (!hasProject) return null;
+    if (saveStatus === "saving") return <span className="text-yellow-400 text-xs">⏳ Saving...</span>;
+    if (saveStatus === "saved") return <span className="text-green-400 text-xs">✅ Saved</span>;
+    if (saveStatus === "error") return <span className="text-red-400 text-xs">❌ Save failed</span>;
+    return <span className="text-gray-600 text-xs">● Auto-save on</span>;
+  };
+
   return (
-    <div className="flex items-center justify-between px-6 py-3 bg-gray-900 border-b border-gray-800">
-      <div className="flex items-center gap-3">
-        <span className="text-blue-400 font-bold text-xl">⚡ DevMind</span>
-        <span className="text-gray-600 text-sm">AI-Powered IDE</span>
+    <div className="flex items-center justify-between px-6 py-3 bg-gray-900 border-b border-gray-800 gap-4">
+
+      {/* Left — logo + project name */}
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="text-blue-400 font-bold text-xl whitespace-nowrap">⚡ DevMind</span>
+
+        <button
+          onClick={onShowProjects}
+          className="text-gray-500 hover:text-white text-xs px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 transition-all whitespace-nowrap"
+        >
+          📁 Projects
+        </button>
+
+        {editingName ? (
+          <input
+            className="bg-gray-800 text-white text-sm px-2 py-1 rounded outline-none focus:ring-1 focus:ring-blue-500 w-40"
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            onBlur={handleNameSave}
+            onKeyDown={(e) => e.key === "Enter" && handleNameSave()}
+            autoFocus
+          />
+        ) : (
+          <button
+            onClick={handleNameClick}
+            className="text-gray-400 hover:text-white text-sm truncate max-w-xs transition-all"
+            title="Click to rename"
+          >
+            {currentProjectName}
+          </button>
+        )}
+
+        {saveLabel()}
       </div>
 
-      <div className="flex items-center gap-3">
+      {/* Center — controls */}
+      <div className="flex items-center gap-2 flex-shrink-0">
         {/* Mode toggle */}
-        <div className="flex items-center gap-2 bg-gray-800 p-1 rounded-lg">
+        <div className="flex items-center gap-1 bg-gray-800 p-1 rounded-lg">
           <button
             onClick={() => setMode("ai")}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-              mode === "ai"
-                ? "bg-blue-600 text-white"
-                : "text-gray-400 hover:text-white"
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              mode === "ai" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
             }`}
           >
-            🤖 AI Mode
+            🤖 AI
           </button>
           <button
             onClick={() => setMode("manual")}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-              mode === "manual"
-                ? "bg-blue-600 text-white"
-                : "text-gray-400 hover:text-white"
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              mode === "manual" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
             }`}
           >
-            ✏️ Manual Mode
+            ✏️ Manual
           </button>
         </div>
 
@@ -66,64 +122,66 @@ export default function TopBar({ showChat, setShowChat, user }) {
           <button
             onClick={undo}
             disabled={!canUndo}
-            className="px-3 py-1.5 rounded-md text-sm font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 hover:text-white hover:bg-gray-700"
+            className="px-2 py-1.5 rounded-md text-xs transition-all disabled:opacity-30 text-gray-400 hover:text-white hover:bg-gray-700"
           >
-            ↩ Undo
+            ↩
           </button>
           <button
             onClick={redo}
             disabled={!canRedo}
-            className="px-3 py-1.5 rounded-md text-sm font-medium transition-all disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 hover:text-white hover:bg-gray-700"
+            className="px-2 py-1.5 rounded-md text-xs transition-all disabled:opacity-30 text-gray-400 hover:text-white hover:bg-gray-700"
           >
-            ↪ Redo
+            ↪
           </button>
         </div>
 
-        {/* AI Chat toggle */}
+        {/* New project */}
+        <button
+          onClick={onNewProject}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-800 text-gray-400 hover:text-white transition-all"
+        >
+          + New
+        </button>
+
+        {/* AI Chat */}
         <button
           onClick={() => setShowChat(!showChat)}
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-            showChat
-              ? "bg-purple-600 text-white"
-              : "bg-gray-800 text-gray-400 hover:text-white"
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            showChat ? "bg-purple-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
           }`}
         >
-          💬 {showChat ? "Hide Chat" : "AI Chat"}
+          💬 {showChat ? "Hide" : "Chat"}
         </button>
 
         {/* Copy */}
         <button
           onClick={handleCopy}
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
-            copied
-              ? "bg-green-600 text-white"
-              : "bg-gray-800 text-gray-400 hover:text-white"
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            copied ? "bg-green-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
           }`}
         >
-          {copied ? "✅ Copied!" : "📋 Copy"}
+          {copied ? "✅" : "📋"}
         </button>
 
         {/* Export */}
         <button
           onClick={handleExport}
-          className="px-4 py-1.5 rounded-lg text-sm font-medium bg-green-700 hover:bg-green-600 text-white transition-all"
+          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-700 hover:bg-green-600 text-white transition-all"
         >
           ⬇️ Export
         </button>
       </div>
 
-      {/* User info + logout */}
-      <div className="flex items-center gap-3">
-        <span className="text-gray-500 text-xs">
-          {user?.email}
-        </span>
+      {/* Right — user */}
+      <div className="flex items-center gap-3 flex-shrink-0">
+        <span className="text-gray-500 text-xs truncate max-w-32">{user?.email}</span>
         <button
           onClick={handleLogout}
           className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-800 text-gray-400 hover:bg-red-900 hover:text-red-400 transition-all"
         >
           Logout
         </button>
-        <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+        <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse flex-shrink-0" />
       </div>
     </div>
   );

@@ -18,3 +18,5 @@ build/
 .DS_Store
 devmind/.env
 tastemind-backend/venv/
+backend/venv/
+backend/.env

@@ -127,7 +127,7 @@ export default function App({ user, onBackToDashboard }) {
     }
   };
 
-  // Rename current project (Updated with fallback to create project if none exists)
+  // Rename current project
   const handleRenameProject = async (newName) => {
     setCurrentProjectName(newName);
     // If no project exists yet, create one first
@@ -322,6 +322,11 @@ export default function App({ user, onBackToDashboard }) {
           {/* API Tester */}
           <div className={`${activePanel === "api" ? "flex" : "hidden"} flex-1 overflow-hidden flex-col`}>
             <APITester />
+          </div>
+
+          {/* AI Chat full panel */}
+          <div className={`${activePanel === "ai" ? "flex" : "hidden"} flex-1 overflow-hidden flex-col`}>
+            <ChatSidebar />
           </div>
 
           {/* AI Chat sidebar */}

@@ -18,6 +18,7 @@ export default function TopBar({
   const [copied, setCopied] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState("");
+  const [deploying, setDeploying] = useState(false);
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
@@ -30,6 +31,125 @@ export default function TopBar({
     a.download = "App.jsx";
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleDeploy = async () => {
+    if (!code || deploying) return;
+    setDeploying(true);
+
+    try {
+      const appCode = `import React, { useState, useEffect, useRef, useCallback, useMemo, useReducer, useContext, createContext } from "react";
+
+${code}
+
+export default DevApp;`;
+
+      const files = [
+        {
+          file: "src/App.jsx",
+          data: appCode,
+        },
+        {
+          file: "src/main.jsx",
+          data: `import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App";
+
+createRoot(document.getElementById("root")).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);`,
+        },
+        {
+          file: "index.html",
+          data: `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${currentProjectName || "DevMind Project"}</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>`,
+        },
+        {
+          file: "package.json",
+          data: JSON.stringify({
+            name: (currentProjectName || "devmind-project")
+              .toLowerCase()
+              .replace(/\s+/g, "-")
+              .replace(/[^a-z0-9-]/g, "")
+              .slice(0, 50),
+            version: "1.0.0",
+            scripts: {
+              dev: "vite",
+              build: "vite build",
+            },
+            dependencies: {
+              react: "^18.2.0",
+              "react-dom": "^18.2.0",
+            },
+            devDependencies: {
+              "@vitejs/plugin-react": "^4.0.0",
+              vite: "^4.0.0",
+            },
+          }, null, 2),
+        },
+        {
+          file: "vite.config.js",
+          data: `import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig({
+  plugins: [react()],
+});`,
+        },
+      ];
+
+      const projectName = (currentProjectName || "devmind-project")
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "")
+        .slice(0, 50);
+
+      const response = await fetch("https://api.vercel.com/v13/deployments", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${import.meta.env.VITE_VERCEL_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: projectName,
+          files,
+          projectSettings: {
+            framework: "vite",
+            buildCommand: "vite build",
+            outputDirectory: "dist",
+            installCommand: "npm install",
+          },
+          target: "production",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.url) {
+        const liveUrl = `https://${data.url}`;
+        window.open(liveUrl, "_blank");
+        alert("🌐 Deployed! Your site is live at:\n" + liveUrl);
+      } else {
+        console.error("Vercel error:", data);
+        alert("Deploy failed: " + (data.error?.message || JSON.stringify(data)));
+      }
+    } catch (err) {
+      alert("Deploy failed: " + err.message);
+    } finally {
+      setDeploying(false);
+    }
   };
 
   const handleCopy = () => {
@@ -65,7 +185,6 @@ export default function TopBar({
 
       {/* Left — back button + logo + project name */}
       <div className="flex items-center gap-2 min-w-0">
-        {/* Back to dashboard */}
         <button
           onClick={onBackToDashboard}
           className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition-all whitespace-nowrap"
@@ -75,7 +194,6 @@ export default function TopBar({
         </button>
 
         <span className="text-gray-700 text-sm">|</span>
-
         <span className="text-blue-400 font-bold text-lg whitespace-nowrap">⚡</span>
 
         <button
@@ -181,6 +299,16 @@ export default function TopBar({
           className="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-700 hover:bg-green-600 text-white transition-all"
         >
           ⬇️ Export
+        </button>
+
+        {/* Deploy */}
+        <button
+          onClick={handleDeploy}
+          disabled={deploying}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-orange-600 hover:bg-orange-500 disabled:bg-gray-700 text-white transition-all"
+          title="Deploy to Vercel"
+        >
+          {deploying ? "⏳ Deploying..." : "🌐 Deploy"}
         </button>
       </div>
 

@@ -127,10 +127,24 @@ export default function App({ user, onBackToDashboard }) {
     }
   };
 
-  // Rename current project
+  // Rename current project (Updated with fallback to create project if none exists)
   const handleRenameProject = async (newName) => {
-    if (!currentProjectId) return;
     setCurrentProjectName(newName);
+    // If no project exists yet, create one first
+    if (!currentProjectId) {
+      try {
+        setSaveStatus("saving");
+        const project = await createProject(user.id, newName, code, tabs);
+        setProjects((prev) => [project, ...prev]);
+        loadProjectIntoEditor(project);
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus(null), 2000);
+      } catch (err) {
+        setSaveStatus("error");
+        console.error("Create on rename failed:", err);
+      }
+      return;
+    }
     try {
       await saveProject(currentProjectId, newName, code, tabs);
       setProjects((prev) =>

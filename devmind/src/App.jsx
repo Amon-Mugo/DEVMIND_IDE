@@ -24,7 +24,7 @@ const DEFAULT_CODE = `function DevApp() {
   );
 }`;
 
-export default function App({ user }) {
+export default function App({ user, onBackToDashboard }) {
   const [activePanel, setActivePanel] = useState("editor");
   const [showChat, setShowChat] = useState(false);
   const [editorWidth, setEditorWidth] = useState(50);
@@ -53,9 +53,6 @@ export default function App({ user }) {
     loadProjects(user.id)
       .then((data) => {
         setProjects(data);
-        if (data.length > 0) {
-          loadProjectIntoEditor(data[0]);
-        }
       })
       .catch(console.error);
   }, [user]);
@@ -116,7 +113,6 @@ export default function App({ user }) {
       const updated = projects.filter((p) => p.id !== projectId);
       setProjects(updated);
 
-      // If we deleted the current project, load the next one or reset
       if (projectId === currentProjectId) {
         if (updated.length > 0) {
           loadProjectIntoEditor(updated[0]);
@@ -182,6 +178,7 @@ export default function App({ user }) {
         onRenameProject={handleRenameProject}
         onShowProjects={() => setShowProjectPanel(!showProjectPanel)}
         hasProject={!!currentProjectId}
+        onBackToDashboard={onBackToDashboard}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -240,7 +237,6 @@ export default function App({ user }) {
                         </p>
                       </div>
 
-                      {/* Delete button */}
                       <button
                         onClick={(e) => handleDeleteProject(e, project.id)}
                         disabled={deletingId === project.id}

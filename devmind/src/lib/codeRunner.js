@@ -1,62 +1,92 @@
-const LANGUAGE_VERSIONS = {
-  python: "3.11",
-  javascript: "20.11.1",
-  java: "15.0.2",
-  go: "1.16.2",
-  php: "8.1.2",
+// Run JavaScript directly in browser
+const runJavaScript = (code) => {
+  const logs = [];
+  const originalLog = console.log;
+  const originalError = console.error;
+
+  try {
+    const proxiedConsole = {
+      log: (...args) => logs.push(args.join(" ")),
+      error: (...args) => logs.push("ERROR: " + args.join(" ")),
+      warn: (...args) => logs.push("WARN: " + args.join(" ")),
+    };
+
+    const fn = new Function("console", code);
+    fn(proxiedConsole);
+
+    return { output: logs.join("\n"), error: "" };
+  } catch (err) {
+    return { output: logs.join("\n"), error: err.message };
+  } finally {
+    console.log = originalLog;
+    console.error = originalError;
+  }
 };
 
-export const runCode = async (language, code) => {
+// Run Python using Pyodide (Python in browser via WebAssembly)
+let pyodide = null;
+
+const loadPyodide = async () => {
+  if (pyodide) return pyodide;
+
+  // Load Pyodide script if not already loaded
+  if (!window.loadPyodide) {
+    await new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js";
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  pyodide = await window.loadPyodide({
+    indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/",
+  });
+
+  return pyodide;
+};
+
+const runPython = async (code) => {
   try {
-    const response = await fetch("https://api.e2b.dev/sandboxes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": import.meta.env.VITE_E2B_API_KEY,
-      },
-      body: JSON.stringify({
-        template: language === "python" ? "Python3" : "Node",
-        timeout: 30,
-      }),
-    });
+    const py = await loadPyodide();
 
-    if (!response.ok) throw new Error("Failed to create sandbox");
+    // Capture stdout
+    await py.runPythonAsync(`
+import sys
+import io
+sys.stdout = io.StringIO()
+sys.stderr = io.StringIO()
+    `);
 
-    const sandbox = await response.json();
-    const sandboxId = sandbox.sandboxID;
+    await py.runPythonAsync(code);
 
-    // Run the code
-    const execResponse = await fetch(
-      `https://api.e2b.dev/sandboxes/${sandboxId}/processes`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-Key": import.meta.env.VITE_E2B_API_KEY,
-        },
-        body: JSON.stringify({
-          cmd: language === "python" ? "python3" : "node",
-          args: ["-c", code],
-          timeout: 30,
-        }),
-      }
-    );
+    const stdout = py.runPython("sys.stdout.getvalue()");
+    const stderr = py.runPython("sys.stderr.getvalue()");
 
-    const result = await execResponse.json();
+    // Reset stdout
+    await py.runPythonAsync(`
+sys.stdout = sys.__stdout__
+sys.stderr = sys.__stderr__
+    `);
 
-    // Kill sandbox after use
-    await fetch(`https://api.e2b.dev/sandboxes/${sandboxId}`, {
-      method: "DELETE",
-      headers: {
-        "X-API-Key": import.meta.env.VITE_E2B_API_KEY,
-      },
-    });
-
-    return {
-      output: result.stdout || "",
-      error: result.stderr || "",
-    };
+    return { output: stdout || "", error: stderr || "" };
   } catch (err) {
     return { output: "", error: err.message };
   }
+};
+
+export const runCode = async (language, code) => {
+  if (language === "javascript") {
+    return runJavaScript(code);
+  }
+
+  if (language === "python") {
+    return await runPython(code);
+  }
+
+  return {
+    output: "",
+    error: `Live execution for ${language} is coming soon. Copy and run locally.`,
+  };
 };

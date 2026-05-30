@@ -1,51 +1,44 @@
 export const fetchImages = async (keyword, count = 6) => {
-  try {
-    const response = await fetch(
-      `https://api.unsplash.com/search/photos?query=${keyword}&per_page=${count}&orientation=landscape`,
-      {
-        headers: {
-          Authorization: `Client-ID ${import.meta.env.VITE_UNSPLASH_ACCESS_KEY}`,
-        },
-      }
-    );
-    const data = await response.json();
-    if (!data.results) return [];
-    return data.results.map((photo) => ({
-      url: photo.urls.regular,
-      small: photo.urls.small,
-      thumb: photo.urls.thumb,
-      alt: photo.alt_description || keyword,
-      photographer: photo.user.name,
-    }));
-  } catch (err) {
-    console.error("Unsplash fetch failed:", err);
-    return [];
-  }
+  return Array.from({ length: count }, (_, i) => ({
+    url: `https://loremflickr.com/800/500/${encodeURIComponent(keyword)}?random=${i + 1}`,
+    small: `https://loremflickr.com/400/250/${encodeURIComponent(keyword)}?random=${i + 1}`,
+    thumb: `https://loremflickr.com/200/150/${encodeURIComponent(keyword)}?random=${i + 1}`,
+    alt: keyword,
+  }));
 };
 
 export const detectKeyword = (prompt) => {
   const keywords = {
-    shoe: "sneakers shoes footwear",
-    food: "food restaurant meal",
-    gaming: "gaming esports controller",
-    fitness: "fitness gym workout",
-    finance: "finance business money",
-    travel: "travel landscape adventure",
-    fashion: "fashion clothing style",
-    tech: "technology computer code",
-    blog: "writing articles journalism",
-    music: "music concert headphones",
-    health: "healthcare medical doctor",
-    education: "education learning student",
-    "real estate": "house architecture property",
-    dashboard: "business office analytics",
-    landing: "business startup office",
-    ecommerce: "shopping products retail",
+    car: "car",
+    vehicle: "car",
+    automotive: "car",
+    shoe: "shoes",
+    food: "food",
+    gaming: "gaming",
+    fitness: "fitness",
+    finance: "finance",
+    travel: "travel",
+    fashion: "fashion",
+    tech: "technology",
+    blog: "writing",
+    music: "music",
+    health: "healthcare",
+    education: "education",
+    "real estate": "house",
+    dashboard: "office",
+    ecommerce: "shopping",
+    restaurant: "restaurant",
+    hotel: "hotel",
+    portfolio: "design",
+    crypto: "cryptocurrency",
+    coffee: "coffee",
+    beauty: "beauty",
+    sport: "sports",
   };
 
   const lower = prompt.toLowerCase();
   for (const [key, value] of Object.entries(keywords)) {
     if (lower.includes(key)) return value;
   }
-  return "business technology";
+  return "business";
 };

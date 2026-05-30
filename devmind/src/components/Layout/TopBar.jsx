@@ -12,6 +12,7 @@ export default function TopBar({
   onRenameProject,
   onShowProjects,
   hasProject,
+  onBackToDashboard,
 }) {
   const { mode, setMode, code, undo, redo, historyIndex, history } = useDevMindStore();
   const [copied, setCopied] = useState(false);
@@ -60,17 +61,28 @@ export default function TopBar({
   };
 
   return (
-    <div className="flex items-center justify-between px-6 py-3 bg-gray-900 border-b border-gray-800 gap-4">
+    <div className="flex items-center justify-between px-4 py-3 bg-gray-900 border-b border-gray-800 gap-4">
 
-      {/* Left — logo + project name */}
-      <div className="flex items-center gap-3 min-w-0">
-        <span className="text-blue-400 font-bold text-xl whitespace-nowrap">⚡ DevMind</span>
+      {/* Left — back button + logo + project name */}
+      <div className="flex items-center gap-2 min-w-0">
+        {/* Back to dashboard */}
+        <button
+          onClick={onBackToDashboard}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition-all whitespace-nowrap"
+          title="Back to dashboard"
+        >
+          ← Dashboard
+        </button>
+
+        <span className="text-gray-700 text-sm">|</span>
+
+        <span className="text-blue-400 font-bold text-lg whitespace-nowrap">⚡</span>
 
         <button
           onClick={onShowProjects}
           className="text-gray-500 hover:text-white text-xs px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 transition-all whitespace-nowrap"
         >
-          📁 Projects
+          📁
         </button>
 
         {editingName ? (

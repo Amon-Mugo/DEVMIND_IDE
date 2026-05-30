@@ -41,17 +41,54 @@ const useDevMindStore = create((set, get) => ({
   canUndo: () => get().historyIndex > 0,
   canRedo: () => get().historyIndex < get().history.length - 1,
 
+  // ── Tabs ──────────────────────────────────────────────────────────────
   tabs: [{ id: 1, name: "App.jsx", code: DEFAULT_CODE }],
   activeTab: 1,
 
-  setActiveTab: (id) => set((state) => ({
-    activeTab: id,
-    code: state.tabs.find(t => t.id === id)?.code || "",
+  setActiveTab: (id) => set((state) => {
+    const tab = state.tabs.find(t => t.id === id);
+    if (!tab) return state;
+    return {
+      activeTab: id,
+      code: tab.code,
+      history: [tab.code],
+      historyIndex: 0,
+    };
+  }),
+
+  addTab: (name = null) => set((state) => {
+    const id = Date.now();
+    const tabName = name || `file${state.tabs.length + 1}.jsx`;
+    const newTab = { id, name: tabName, code: "" };
+    return {
+      tabs: [...state.tabs, newTab],
+      activeTab: id,
+      code: "",
+      history: [""],
+      historyIndex: 0,
+    };
+  }),
+
+  removeTab: (id) => set((state) => {
+    if (state.tabs.length === 1) return state; // keep at least one tab
+    const updated = state.tabs.filter(t => t.id !== id);
+    const newActive = state.activeTab === id
+      ? updated[updated.length - 1]
+      : state.tabs.find(t => t.id === state.activeTab);
+    return {
+      tabs: updated,
+      activeTab: newActive.id,
+      code: newActive.code,
+      history: [newActive.code],
+      historyIndex: 0,
+    };
+  }),
+
+  renameTab: (id, name) => set((state) => ({
+    tabs: state.tabs.map(t => t.id === id ? { ...t, name } : t),
   })),
 
-  addTab: (tab) => set((state) => ({ tabs: [...state.tabs, tab] })),
-
-  // Project state
+  // ── Project ───────────────────────────────────────────────────────────
   currentProjectId: null,
   currentProjectName: "Untitled Project",
 
@@ -78,18 +115,18 @@ const useDevMindStore = create((set, get) => ({
     });
   },
 
+  // ── Messages ──────────────────────────────────────────────────────────
   messages: [],
   addMessage: (msg) => set((state) => ({
     messages: [...state.messages, msg],
   })),
   clearMessages: () => set({ messages: [] }),
 
+  // ── Mode ──────────────────────────────────────────────────────────────
   mode: "ai",
   setMode: (mode) => set({ mode }),
-
   loading: false,
   setLoading: (val) => set({ loading: val }),
-
   saving: false,
   setSaving: (val) => set({ saving: val }),
 }));

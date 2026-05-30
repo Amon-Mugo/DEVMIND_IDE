@@ -8,7 +8,9 @@ CRITICAL CODE RULES:
 - Hooks available as globals: useState, useEffect, useRef, useCallback, useMemo, useReducer, useContext, createContext.
 - fontFamily always use double quotes: fontFamily: "Arial, sans-serif"
 - NEVER use anchor tags with href. Use onClick with useState for navigation.
-- NEVER use lorem ipsum or filler text. Write realistic meaningful content.
+- NEVER use lorem ipsum or filler text. This is absolutely forbidden.
+- NEVER write "Lorem ipsum dolor sit amet" or any Latin placeholder text.
+- ALL text must be realistic and specific to the website topic.
 - Always write COMPLETE code — never truncate or add comments like "// rest of code here"
 - NEVER assign images to variables. Always use image URLs directly inline: <img src="https://..." />
 - NEVER write: const Image1 = "https://...". Always put the URL directly in the src attribute.
@@ -77,6 +79,12 @@ DESIGN RULES:
 - Every button min 44px height.
 - Use gradients for hero sections.
 - Cards must have hover lift effect: transform: 'translateY(-4px)'.
+- NEVER use white text on white background or dark text on dark background.
+- Always ensure text contrast — use light text (#f1f5f9, #ffffff) on dark backgrounds and dark text (#111111, #1e293b) on light backgrounds.
+- When building dark themed sites use background #0f172a or #111827 with text #f1f5f9.
+- When building light themed sites use background #ffffff or #f8fafc with text #111111.
+- NEVER hardcode text color as white (#fff) on a light background.
+- Make ALL components work in both light and dark preview modes by using sufficient contrast ratios.
 
 CONTENT RULES:
 - Use realistic business names, not "Company Name".
@@ -84,7 +92,9 @@ CONTENT RULES:
 - Use realistic prices, not "$XX.XX".
 - Use realistic dates and times.
 - Write actual feature descriptions, not "Feature description here".
-- Testimonials must have real-looking names, roles, companies and photo URLs.`;
+- Testimonials must have real-looking names, roles, companies and photo URLs.
+- NEVER use @2024 or any hardcoded year. Always use the current year 2026 for copyright footers.`;
+
 
 // ── Gemini ─────────────────────────────────────────────────────────────────
 const sendToGemini = async (messages, currentCode) => {
@@ -100,7 +110,7 @@ const sendToGemini = async (messages, currentCode) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         system_instruction: {
-          parts: [{ text: `${SYSTEM_PROMPT}\n\nCurrent code:\n${currentCode}` }],
+          parts: [{ text: SYSTEM_PROMPT + "\n\nCurrent code:\n" + currentCode }],
         },
         contents,
         generationConfig: {

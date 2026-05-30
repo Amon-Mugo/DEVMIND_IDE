@@ -24,7 +24,7 @@ const DEFAULT_CODE = `function DevApp() {
   );
 }`;
 
-export default function App({ user, onBackToDashboard }) {
+export default function App({ user, project, onBackToDashboard }) {
   const [activePanel, setActivePanel] = useState("editor");
   const [showChat, setShowChat] = useState(false);
   const [editorWidth, setEditorWidth] = useState(50);
@@ -32,7 +32,8 @@ export default function App({ user, onBackToDashboard }) {
   const [showProjectPanel, setShowProjectPanel] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
-  const isDragging = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
+
   const containerRef = useRef(null);
   const saveTimeoutRef = useRef(null);
 
@@ -47,14 +48,27 @@ export default function App({ user, onBackToDashboard }) {
     loadProjectIntoEditor,
   } = useDevMindStore();
 
+  // Load selected project from Dashboard into editor
+  useEffect(() => {
+    if (project) {
+      loadProjectIntoEditor(project);
+    }
+  }, []);
+
   // Load user's projects on mount
   useEffect(() => {
     if (!user) return;
+    let isMounted = true;
+
     loadProjects(user.id)
       .then((data) => {
-        setProjects(data);
+        if (isMounted) setProjects(data);
       })
       .catch(console.error);
+
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   // Auto-save 2 seconds after the user stops typing
@@ -62,33 +76,44 @@ export default function App({ user, onBackToDashboard }) {
     if (!currentProjectId) return;
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
+    let isMounted = true;
+
     saveTimeoutRef.current = setTimeout(async () => {
       try {
-        setSaveStatus("saving");
+        if (isMounted) setSaveStatus("saving");
         await saveProject(currentProjectId, currentProjectName, code, tabs);
-        setSaveStatus("saved");
-        setTimeout(() => setSaveStatus(null), 2000);
+        if (isMounted) {
+          setSaveStatus("saved");
+          setTimeout(() => {
+            if (isMounted) setSaveStatus(null);
+          }, 2000);
+        }
       } catch (err) {
-        setSaveStatus("error");
-        console.error("Auto-save failed:", err);
+        if (isMounted) {
+          setSaveStatus("error");
+          console.error("Auto-save failed:", err);
+        }
       }
     }, 2000);
 
-    return () => clearTimeout(saveTimeoutRef.current);
-  }, [code, tabs, currentProjectId]);
+    return () => {
+      isMounted = false;
+      clearTimeout(saveTimeoutRef.current);
+    };
+  }, [code, tabs, currentProjectId, currentProjectName]);
 
   // Create a new blank project
   const handleNewProject = async () => {
     try {
       setSaveStatus("saving");
-      const project = await createProject(
+      const newProject = await createProject(
         user.id,
         "Untitled Project",
         DEFAULT_CODE,
         [{ id: 1, name: "App.jsx", code: DEFAULT_CODE }]
       );
-      setProjects((prev) => [project, ...prev]);
-      loadProjectIntoEditor(project);
+      setProjects((prev) => [newProject, ...prev]);
+      loadProjectIntoEditor(newProject);
       setSaveStatus("saved");
       setTimeout(() => setSaveStatus(null), 2000);
     } catch (err) {
@@ -98,8 +123,8 @@ export default function App({ user, onBackToDashboard }) {
   };
 
   // Switch to a different project
-  const handleSelectProject = (project) => {
-    loadProjectIntoEditor(project);
+  const handleSelectProject = (proj) => {
+    loadProjectIntoEditor(proj);
     setShowProjectPanel(false);
   };
 
@@ -130,13 +155,13 @@ export default function App({ user, onBackToDashboard }) {
   // Rename current project
   const handleRenameProject = async (newName) => {
     setCurrentProjectName(newName);
-    // If no project exists yet, create one first
+
     if (!currentProjectId) {
       try {
         setSaveStatus("saving");
-        const project = await createProject(user.id, newName, code, tabs);
-        setProjects((prev) => [project, ...prev]);
-        loadProjectIntoEditor(project);
+        const newProject = await createProject(user.id, newName, code, tabs);
+        setProjects((prev) => [newProject, ...prev]);
+        loadProjectIntoEditor(newProject);
         setSaveStatus("saved");
         setTimeout(() => setSaveStatus(null), 2000);
       } catch (err) {
@@ -145,6 +170,7 @@ export default function App({ user, onBackToDashboard }) {
       }
       return;
     }
+
     try {
       await saveProject(currentProjectId, newName, code, tabs);
       setProjects((prev) =>
@@ -157,31 +183,44 @@ export default function App({ user, onBackToDashboard }) {
     }
   };
 
-  const handleMouseDown = useCallback(() => {
-    isDragging.current = true;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(true);
   }, []);
 
-  const handleMouseMove = useCallback((e) => {
-    if (!isDragging.current || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const newWidth = ((e.clientX - rect.left) / rect.width) * 100;
-    if (newWidth > 20 && newWidth < 80) setEditorWidth(newWidth);
-  }, []);
+  const handleMouseMove = useCallback(
+    (e) => {
+      if (!isDragging || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const newWidth = ((e.clientX - rect.left) / rect.width) * 100;
+      if (newWidth > 20 && newWidth < 80) setEditorWidth(newWidth);
+    },
+    [isDragging]
+  );
 
   const handleMouseUp = useCallback(() => {
-    isDragging.current = false;
-    document.body.style.cursor = "default";
-    document.body.style.userSelect = "auto";
+    setIsDragging(false);
   }, []);
 
+  useEffect(() => {
+    if (isDragging) {
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+    } else {
+      document.body.style.cursor = "default";
+      document.body.style.userSelect = "auto";
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
   return (
-    <div
-      className="flex flex-col h-screen w-screen bg-gray-950 text-white font-mono overflow-hidden"
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-    >
+    <div className="flex flex-col h-screen w-screen bg-gray-950 text-white font-mono overflow-hidden">
       <TopBar
         showChat={showChat}
         setShowChat={setShowChat}
@@ -198,21 +237,17 @@ export default function App({ user, onBackToDashboard }) {
       <div className="flex flex-1 overflow-hidden">
         <Sidebar activePanel={activePanel} setActivePanel={setActivePanel} />
 
-        <div className="flex flex-1 overflow-hidden relative">
+        <div className="flex flex-1 overflow-hidden relative" ref={containerRef}>
 
           {/* Project panel */}
           {showProjectPanel && (
             <div className="absolute left-0 top-0 z-50 w-72 h-full bg-gray-900 border-r border-gray-800 flex flex-col shadow-2xl">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-                <span className="text-gray-300 text-sm font-medium">
-                  📁 Projects
-                </span>
+                <span className="text-gray-300 text-sm font-medium">📁 Projects</span>
                 <button
                   onClick={() => setShowProjectPanel(false)}
                   className="text-gray-500 hover:text-white text-lg"
-                >
-                  ✕
-                </button>
+                >✕</button>
               </div>
 
               <button
@@ -228,36 +263,36 @@ export default function App({ user, onBackToDashboard }) {
                     No projects yet. Create one!
                   </p>
                 ) : (
-                  projects.map((project) => (
+                  projects.map((p) => (
                     <div
-                      key={project.id}
-                      onClick={() => handleSelectProject(project)}
+                      key={p.id}
+                      onClick={() => handleSelectProject(p)}
                       className={`group w-full flex items-center justify-between px-3 py-2.5 rounded-lg mb-1 cursor-pointer transition-all ${
-                        project.id === currentProjectId
+                        p.id === currentProjectId
                           ? "bg-blue-600/20 border border-blue-600/30"
                           : "hover:bg-gray-800"
                       }`}
                     >
                       <div className="min-w-0">
                         <p className={`text-sm font-medium truncate ${
-                          project.id === currentProjectId
+                          p.id === currentProjectId
                             ? "text-white"
                             : "text-gray-400 group-hover:text-white"
                         }`}>
-                          {project.name}
+                          {p.name}
                         </p>
                         <p className="text-xs text-gray-600 mt-0.5">
-                          {new Date(project.updated_at).toLocaleDateString()}
+                          {new Date(p.updated_at).toLocaleDateString()}
                         </p>
                       </div>
 
                       <button
-                        onClick={(e) => handleDeleteProject(e, project.id)}
-                        disabled={deletingId === project.id}
+                        onClick={(e) => handleDeleteProject(e, p.id)}
+                        disabled={deletingId === p.id}
                         className="ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-900/30 transition-all disabled:opacity-50"
                         title="Delete project"
                       >
-                        {deletingId === project.id ? "⏳" : "🗑️"}
+                        {deletingId === p.id ? "⏳" : "🗑️"}
                       </button>
                     </div>
                   ))
@@ -267,10 +302,7 @@ export default function App({ user, onBackToDashboard }) {
           )}
 
           {/* Editor + Preview */}
-          <div
-            ref={containerRef}
-            className={`${activePanel === "editor" ? "flex" : "hidden"} flex-1 overflow-hidden`}
-          >
+          <div className={`${activePanel === "editor" ? "flex" : "hidden"} flex-1 overflow-hidden`}>
             {mode === "manual" ? (
               <div className="flex-1 overflow-hidden flex flex-col">
                 <MonacoEditor />
@@ -329,7 +361,7 @@ export default function App({ user, onBackToDashboard }) {
             <ChatSidebar />
           </div>
 
-          {/* AI Chat sidebar */}
+          {/* AI Chat side drawer */}
           {showChat && (
             <div className="w-80 border-l border-gray-800 flex flex-col overflow-hidden">
               <ChatSidebar />

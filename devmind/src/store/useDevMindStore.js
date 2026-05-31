@@ -70,7 +70,7 @@ const useDevMindStore = create((set, get) => ({
   }),
 
   removeTab: (id) => set((state) => {
-    if (state.tabs.length === 1) return state; // keep at least one tab
+    if (state.tabs.length === 1) return state;
     const updated = state.tabs.filter(t => t.id !== id);
     const newActive = state.activeTab === id
       ? updated[updated.length - 1]
@@ -112,6 +112,7 @@ const useDevMindStore = create((set, get) => ({
       code: firstTab.code,
       history: [firstTab.code],
       historyIndex: 0,
+      messages: project.messages || [],
     });
   },
 

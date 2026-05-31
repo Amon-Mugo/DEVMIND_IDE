@@ -23,9 +23,27 @@ export const createProject = async (userId, name, code, tabs) => {
       name,
       code,
       tabs,
+      messages: [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }])
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const saveProject = async (id, name, code, tabs, messages = []) => {
+  const { data, error } = await supabase
+    .from("projects")
+    .update({
+      name,
+      code,
+      tabs,
+      messages,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
     .select()
     .single();
   if (error) throw error;
@@ -38,19 +56,4 @@ export const deleteProject = async (id) => {
     .delete()
     .eq("id", id);
   if (error) throw error;
-};
-export const saveProject = async (id, name, code, tabs) => {
-  const { data, error } = await supabase
-    .from("projects")
-    .update({
-      name,
-      code,
-      tabs,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
 };

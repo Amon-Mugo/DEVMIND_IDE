@@ -1,6 +1,7 @@
 export default function Sidebar({ activePanel, setActivePanel }) {
   const panels = [
     { id: "editor", icon: "📝", label: "Editor" },
+    { id: "files", icon: "🗂️", label: "File Tree" },
     { id: "preview", icon: "👁️", label: "Preview" },
     { id: "database", icon: "🗄️", label: "Database" },
     { id: "library", icon: "📦", label: "Components" },

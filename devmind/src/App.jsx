@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import TopBar from "./components/Layout/TopBar";
 import Sidebar from "./components/Layout/Sidebar";
+import FileTree from "./components/Layout/FileTree";
 import MonacoEditor from "./components/Editor/MonacoEditor";
 import LivePreview from "./components/Preview/LivePreview";
 import ChatSidebar from "./components/AI/ChatSidebar";
@@ -41,6 +42,7 @@ export default function App({ user, project, onBackToDashboard }) {
     mode,
     code,
     tabs,
+    messages,
     currentProjectId,
     currentProjectName,
     setCurrentProject,
@@ -59,16 +61,10 @@ export default function App({ user, project, onBackToDashboard }) {
   useEffect(() => {
     if (!user) return;
     let isMounted = true;
-
     loadProjects(user.id)
-      .then((data) => {
-        if (isMounted) setProjects(data);
-      })
+      .then((data) => { if (isMounted) setProjects(data); })
       .catch(console.error);
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [user]);
 
   // Auto-save 2 seconds after the user stops typing
@@ -77,16 +73,13 @@ export default function App({ user, project, onBackToDashboard }) {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
     let isMounted = true;
-
     saveTimeoutRef.current = setTimeout(async () => {
       try {
         if (isMounted) setSaveStatus("saving");
-        await saveProject(currentProjectId, currentProjectName, code, tabs);
+        await saveProject(currentProjectId, currentProjectName, code, tabs, messages);
         if (isMounted) {
           setSaveStatus("saved");
-          setTimeout(() => {
-            if (isMounted) setSaveStatus(null);
-          }, 2000);
+          setTimeout(() => { if (isMounted) setSaveStatus(null); }, 2000);
         }
       } catch (err) {
         if (isMounted) {
@@ -100,16 +93,13 @@ export default function App({ user, project, onBackToDashboard }) {
       isMounted = false;
       clearTimeout(saveTimeoutRef.current);
     };
-  }, [code, tabs, currentProjectId, currentProjectName]);
+  }, [code, tabs, messages, currentProjectId, currentProjectName]);
 
-  // Create a new blank project
   const handleNewProject = async () => {
     try {
       setSaveStatus("saving");
       const newProject = await createProject(
-        user.id,
-        "Untitled Project",
-        DEFAULT_CODE,
+        user.id, "Untitled Project", DEFAULT_CODE,
         [{ id: 1, name: "App.jsx", code: DEFAULT_CODE }]
       );
       setProjects((prev) => [newProject, ...prev]);
@@ -122,13 +112,11 @@ export default function App({ user, project, onBackToDashboard }) {
     }
   };
 
-  // Switch to a different project
   const handleSelectProject = (proj) => {
     loadProjectIntoEditor(proj);
     setShowProjectPanel(false);
   };
 
-  // Delete a project
   const handleDeleteProject = async (e, projectId) => {
     e.stopPropagation();
     if (!confirm("Delete this project? This cannot be undone.")) return;
@@ -137,13 +125,9 @@ export default function App({ user, project, onBackToDashboard }) {
       await deleteProject(projectId);
       const updated = projects.filter((p) => p.id !== projectId);
       setProjects(updated);
-
       if (projectId === currentProjectId) {
-        if (updated.length > 0) {
-          loadProjectIntoEditor(updated[0]);
-        } else {
-          setCurrentProject(null, "Untitled Project");
-        }
+        if (updated.length > 0) loadProjectIntoEditor(updated[0]);
+        else setCurrentProject(null, "Untitled Project");
       }
     } catch (err) {
       console.error("Failed to delete project:", err);
@@ -152,10 +136,8 @@ export default function App({ user, project, onBackToDashboard }) {
     }
   };
 
-  // Rename current project
   const handleRenameProject = async (newName) => {
     setCurrentProjectName(newName);
-
     if (!currentProjectId) {
       try {
         setSaveStatus("saving");
@@ -170,13 +152,10 @@ export default function App({ user, project, onBackToDashboard }) {
       }
       return;
     }
-
     try {
-      await saveProject(currentProjectId, newName, code, tabs);
+      await saveProject(currentProjectId, newName, code, tabs, messages);
       setProjects((prev) =>
-        prev.map((p) =>
-          p.id === currentProjectId ? { ...p, name: newName } : p
-        )
+        prev.map((p) => p.id === currentProjectId ? { ...p, name: newName } : p)
       );
     } catch (err) {
       console.error("Rename failed:", err);
@@ -188,15 +167,12 @@ export default function App({ user, project, onBackToDashboard }) {
     setIsDragging(true);
   }, []);
 
-  const handleMouseMove = useCallback(
-    (e) => {
-      if (!isDragging || !containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const newWidth = ((e.clientX - rect.left) / rect.width) * 100;
-      if (newWidth > 20 && newWidth < 80) setEditorWidth(newWidth);
-    },
-    [isDragging]
-  );
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const newWidth = ((e.clientX - rect.left) / rect.width) * 100;
+    if (newWidth > 20 && newWidth < 80) setEditorWidth(newWidth);
+  }, [isDragging]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
@@ -212,7 +188,6 @@ export default function App({ user, project, onBackToDashboard }) {
       document.body.style.cursor = "default";
       document.body.style.userSelect = "auto";
     }
-
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
@@ -244,24 +219,17 @@ export default function App({ user, project, onBackToDashboard }) {
             <div className="absolute left-0 top-0 z-50 w-72 h-full bg-gray-900 border-r border-gray-800 flex flex-col shadow-2xl">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
                 <span className="text-gray-300 text-sm font-medium">📁 Projects</span>
-                <button
-                  onClick={() => setShowProjectPanel(false)}
-                  className="text-gray-500 hover:text-white text-lg"
-                >✕</button>
+                <button onClick={() => setShowProjectPanel(false)} className="text-gray-500 hover:text-white text-lg">✕</button>
               </div>
-
               <button
                 onClick={handleNewProject}
                 className="mx-4 mt-3 mb-2 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition-all text-left"
               >
                 + New Project
               </button>
-
               <div className="flex-1 overflow-y-auto p-2">
                 {projects.length === 0 ? (
-                  <p className="text-gray-600 text-xs p-4 text-center">
-                    No projects yet. Create one!
-                  </p>
+                  <p className="text-gray-600 text-xs p-4 text-center">No projects yet. Create one!</p>
                 ) : (
                   projects.map((p) => (
                     <div
@@ -275,22 +243,16 @@ export default function App({ user, project, onBackToDashboard }) {
                     >
                       <div className="min-w-0">
                         <p className={`text-sm font-medium truncate ${
-                          p.id === currentProjectId
-                            ? "text-white"
-                            : "text-gray-400 group-hover:text-white"
-                        }`}>
-                          {p.name}
-                        </p>
+                          p.id === currentProjectId ? "text-white" : "text-gray-400 group-hover:text-white"
+                        }`}>{p.name}</p>
                         <p className="text-xs text-gray-600 mt-0.5">
                           {new Date(p.updated_at).toLocaleDateString()}
                         </p>
                       </div>
-
                       <button
                         onClick={(e) => handleDeleteProject(e, p.id)}
                         disabled={deletingId === p.id}
                         className="ml-2 flex-shrink-0 opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-900/30 transition-all disabled:opacity-50"
-                        title="Delete project"
                       >
                         {deletingId === p.id ? "⏳" : "🗑️"}
                       </button>
@@ -301,6 +263,11 @@ export default function App({ user, project, onBackToDashboard }) {
             </div>
           )}
 
+          {/* File Tree Panel */}
+          <div className={`${activePanel === "files" ? "flex" : "hidden"} flex-col overflow-hidden border-r border-gray-800`} style={{ width: "260px" }}>
+            <FileTree />
+          </div>
+
           {/* Editor + Preview */}
           <div className={`${activePanel === "editor" ? "flex" : "hidden"} flex-1 overflow-hidden`}>
             {mode === "manual" ? (
@@ -309,10 +276,7 @@ export default function App({ user, project, onBackToDashboard }) {
               </div>
             ) : (
               <>
-                <div
-                  style={{ width: `${editorWidth}%` }}
-                  className="overflow-hidden flex flex-col border-r border-gray-800"
-                >
+                <div style={{ width: `${editorWidth}%` }} className="overflow-hidden flex flex-col border-r border-gray-800">
                   <MonacoEditor />
                 </div>
                 <div
@@ -321,10 +285,7 @@ export default function App({ user, project, onBackToDashboard }) {
                 >
                   <div className="w-0.5 h-8 bg-gray-600 group-hover:bg-blue-400 rounded-full" />
                 </div>
-                <div
-                  style={{ width: `${100 - editorWidth}%` }}
-                  className="overflow-hidden flex flex-col"
-                >
+                <div style={{ width: `${100 - editorWidth}%` }} className="overflow-hidden flex flex-col">
                   <LivePreview />
                 </div>
               </>

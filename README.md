@@ -2,25 +2,19 @@
 Build production-ready web applications from plain English descriptions.
 multi-file editing, database tools, backend studio, and one-click Vercel deployment.
 Site can be  found live here https://devmind-ide.vercel.app
-## Feature| Description |
-| 🤖 AI Code Generation | Describe a UI in plain English — Gemini generates complete React components instantly |
-| 👁️ Live Preview | Iframe-based renderer with desktop, tablet, and mobile simulation |
-| 📝 Multi-File Editor | Monaco-based editor with tabs, rename, delete, per-tab code history |
-| 🗂️ File Tree | VS Code-style file explorer with icons per file type |
-| 🗄️ SQL Editor | In-browser SQLite powered by sql.js — no server needed |
-| ⚙️ Backend Studio | AI-generated Python, Node.js, Go, Java, PHP backends with live execution |
-| 🧪 API Tester | Built-in Postman-style HTTP client for testing your APIs |
-| 📦 Component Library | Save, search, and reuse generated components across projects |
-| 💬 AI Chat | Persistent chat history saved per project |
-| 🌐 Deploy | One-click deployment to Vercel |
-| 📁 Project Dashboard | Full project management with grid/table view, rename, delete, search |
-| 🔐 Auth | Supabase authentication with rate limiting, password strength meter |
-
-## Installation
- bash
-cd devmind
-npm install
-```
+#Feature,Description
+🤖 AI Code Generation,Describe a UI in plain English — Gemini generates complete React components instantly.
+👁️ Live Preview,"Iframe-based renderer with desktop, tablet, and mobile simulation."
+📝 Multi-File Editor,"Monaco-based editor with tabs, rename, delete, and per-tab code history."
+🗂️ File Tree,VS Code-style file explorer with icons per file type.
+🗄️ SQL Editor,In-browser SQLite powered by sql.js — no server needed.
+⚙️ Backend Studio,"AI-generated Python, Node.js, Go, Java, and PHP backends with live execution."
+🧪 API Tester,Built-in Postman-style HTTP client for testing your APIs.
+📦 Component Library,"Save, search, and reuse generated components across projects."
+💬 AI Chat,Persistent chat history saved per project.
+🌐 Deploy,One-click deployment to Vercel.
+📁 Project Dashboard,"Full project management with grid/table view, rename, delete, and search."
+🔐 Auth,Supabase authentication with rate limiting and a password strength meter.
 
 ### 3. Set up environment variables
 

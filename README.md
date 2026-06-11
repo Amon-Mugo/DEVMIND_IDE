@@ -4,8 +4,7 @@ multi-file editing, database tools, backend studio, and one-click Vercel deploym
 Site can be  found live here https://devmind-ide.vercel.app
 
 
-
-#Feature,Description
+FEATURES
 
 🤖 AI Code Generation,Describe a UI in plain English — Gemini generates complete React components instantly.
 

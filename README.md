@@ -33,6 +33,15 @@ FEATURES
 
 🔐 Auth,Supabase authentication with rate limiting and a password strength meter.
 
+
+
+
+![image alt](https://github.com/Amon-Mugo/DEVMIND_IDE/blob/5fbd9bfb9781069452ded68e935c6b49b645f4df/image.png)
+
+
+
+
+
 ### 3. Set up environment variables
 
 ```bash

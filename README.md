@@ -131,23 +131,43 @@ uvicorn main:app --reload --port 8000
 ## Architecture
 
 DevMind/
+
+
 ├── devmind/                  # Main IDE (React + Vite)
+
 │   ├── src/
+
 │   │   ├── components/
+
 │   │   │   ├── AI/           # ChatSidebar, ComponentLibrary, MessageBubble, PromptInput
+
+
 │   │   │   ├── Auth/         # Login (signup, signin, forgot password)
+
 │   │   │   ├── Backend/      # BackendStudio, APITester
+
 │   │   │   ├── Dashboard/    # Project management dashboard
+
 │   │   │   ├── Database/     # SQLEditor, DBResults
+
 │   │   │   ├── Editor/       # MonacoEditor, EditorTabs
+
 │   │   │   ├── Layout/       # TopBar, Sidebar, FileTree
+
 │   │   │   └── Preview/      # LivePreview, PreviewToolbar
+
 │   │   ├── hooks/            # useAI, usePreview
+
 │   │   ├── lib/              # ai.js, supabase.js, codeRunner.js, unsplash.js, github.js, sqlRunner.js
+
 │   │   └── store/            # useDevMindStore (Zustand)
+
 ├── backend/                  # Flask ecommerce demo API
+
 ├── tastemind-backend/        # FastAPI restaurant demo API
+
 └── shopmind-frontend/        # React ecommerce frontend demo
+
 
 ### AI Pipeline
 User prompt

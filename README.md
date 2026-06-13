@@ -38,7 +38,7 @@ FEATURES
 
 ![image alt](https://github.com/Amon-Mugo/DEVMIND_IDE/blob/5fbd9bfb9781069452ded68e935c6b49b645f4df/image.png)
 
-![image alt](https://github.com/Amon-Mugo/DEVMIND_IDE/blob/29a45db8e32a0dd76c97d4ce6df5da3db84e0a45/Screenshot_2026-06-13_11-56-14.png)
+![image alt](https://github.com/Amon-Mugo/DEVMIND_IDE/blob/ea3550c20be691823c74c645b43c108702a6eac1/Screenshot_2026-06-13_11-56-14.png)
 
 ![image alt](https://github.com/Amon-Mugo/DEVMIND_IDE/blob/4f6e75f0aff07ae6608bf5349911b1fcfdd73791/Screenshot_2026-06-13_11-46-41.png)
 

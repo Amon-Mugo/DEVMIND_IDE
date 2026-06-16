@@ -350,9 +350,7 @@ uvicorn main:app --reload --port 8000
 - [ ] Branch management
 
 ### 🔜 Version 1.4 — Templates & Marketplace (Planned)
-- [ ] Pre-built starter templates (landing page, dashboard, ecommerce)
 - [ ] Community template marketplace
-- [ ] One-click template deployment
 - [ ] Template categories and search
 
 ### 🔜 Version 1.5 — Advanced AI (Planned)

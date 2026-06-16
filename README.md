@@ -2,7 +2,8 @@
 Build production-ready web applications from plain English descriptions.
 multi-file editing, database tools, backend studio, and one-click Vercel deployment.
 
-#LIVE DEMO
+LIVE DEMO
+
 Site can be  found live here https://devmind-ide.vercel.app
 
 

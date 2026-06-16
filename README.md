@@ -136,17 +136,7 @@ uvicorn main:app --reload --port 8000
 
 ---
 
-## 🔑 API Keys — Where to Get Them
 
-| Key | Source | Free Tier |
-|-----|--------|-----------|
-| `VITE_SUPABASE_URL` + `VITE_SUPABASE_PUBLISHABLE_KEY` | [supabase.com](https://supabase.com) | ✅ Free |
-| `VITE_GEMINI_API_KEY` | [aistudio.google.com](https://aistudio.google.com) | ✅ 1500 req/day |
-| `VITE_GROQ_API_KEY` | [console.groq.com](https://console.groq.com) | ✅ Free tier |
-| `VITE_OPENROUTER_API_KEY` | [openrouter.ai](https://openrouter.ai) | ✅ Free credits |
-| `VITE_PEXELS_API_KEY` | [pexels.com/api](https://pexels.com/api) | ✅ 200 req/hour |
-| `VITE_VERCEL_TOKEN` | [vercel.com/account/tokens](https://vercel.com/account/tokens) | ✅ Free |
-| `VITE_GITHUB_TOKEN` | [github.com/settings/tokens](https://github.com/settings/tokens) | ✅ Free |
 
 ---
 ## Architecture

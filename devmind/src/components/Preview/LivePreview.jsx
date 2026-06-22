@@ -42,10 +42,10 @@ export default function LivePreview() {
     const textColor = theme === "light" ? "#000000" : "#ffffff";
 
     // Strip ES module imports — not supported in Babel standalone inline scripts
-    // Remove all import statements (including multiline) and export default statements
-    let sanitizedCode = (previewCode || "")
-      .replace(/import\s+(?:[\s\S]*?from\s+['"][^'"]*['"]|[\s\S]*?);/g, "") // Remove import statements
-      .replace(/export\s+(default\s+)?/g, ""); // Remove export statements
+    const sanitizedCode = (previewCode || "")
+      .split("\n")
+      .filter((line) => !/^\s*import\s+/.test(line))
+      .join("\n");
 
     const html = `<!DOCTYPE html>
 <html style="height:100%">

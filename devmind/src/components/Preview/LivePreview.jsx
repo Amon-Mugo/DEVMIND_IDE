@@ -41,6 +41,12 @@ export default function LivePreview() {
     const bgColor = theme === "light" ? "#ffffff" : "#0f172a";
     const textColor = theme === "light" ? "#000000" : "#ffffff";
 
+    // Strip ES module imports — not supported in Babel standalone inline scripts
+    const sanitizedCode = (previewCode || "")
+      .split("\n")
+      .filter((line) => !/^\s*import\s+/.test(line))
+      .join("\n");
+
     const html = `<!DOCTYPE html>
 <html style="height:100%">
   <head>
@@ -95,7 +101,7 @@ export default function LivePreview() {
       const createContext = React.createContext;
 
       try {
-        ${previewCode}
+        ${sanitizedCode}
 
         if (typeof DevApp === 'undefined') {
           throw new Error('No DevApp component found');
